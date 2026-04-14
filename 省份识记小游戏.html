@@ -1,0 +1,645 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>识记中国地图小游戏 | 根据轮廓猜省份</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none; /* 避免拖动文字影响体验，但输入框不影响 */
+        }
+
+        body {
+            background: linear-gradient(145deg, #e0eafc 0%, #cfdef3 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Roboto', 'Noto Sans', system-ui, 'Microsoft YaHei', sans-serif;
+            padding: 20px;
+            margin: 0;
+        }
+
+        /* 游戏主卡片 */
+        .game-container {
+            max-width: 750px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 64px 48px 64px 48px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.6);
+            overflow: hidden;
+            backdrop-filter: blur(2px);
+            transition: all 0.2s;
+        }
+
+        /* 头部：分数+进度 */
+        .game-header {
+            background: #2c3e66;
+            padding: 18px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            color: white;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .score-box {
+            background: #f9c74f;
+            padding: 8px 20px;
+            border-radius: 60px;
+            color: #2d3e50;
+            font-weight: bold;
+            font-size: 1.6rem;
+            box-shadow: inset 0 -2px 0 #b47c2e, 0 6px 12px rgba(0,0,0,0.1);
+        }
+
+        .score-box span {
+            font-size: 1rem;
+            font-weight: normal;
+        }
+
+        .progress {
+            background: #1e2a3e;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+        }
+
+        /* 轮廓图区域 */
+        .map-area {
+            padding: 30px 20px 20px;
+            text-align: center;
+            background: #fef9e8;
+            border-bottom: 2px dashed #cbd5e1;
+        }
+
+        .outline-img {
+            max-width: 280px;
+            width: 100%;
+            height: auto;
+            background: #fff6e5;
+            border-radius: 32px;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease;
+            border: 3px solid #ffd966;
+        }
+
+        .outline-img:hover {
+            transform: scale(1.02);
+        }
+
+        /* 输入区卡片 */
+        .input-panel {
+            padding: 24px 28px 28px;
+            background: #ffffffcc;
+            backdrop-filter: blur(4px);
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-label {
+            font-weight: 700;
+            color: #1e3c4c;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 1px;
+        }
+
+        .label-badge {
+            background: #2c3e66;
+            color: white;
+            border-radius: 30px;
+            padding: 2px 12px;
+            font-size: 0.75rem;
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f1f5f9;
+            border-radius: 60px;
+            padding: 4px 8px 4px 20px;
+            border: 1px solid #cbd5e1;
+            transition: all 0.2s;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: #f9a826;
+            box-shadow: 0 0 0 3px rgba(249,168,38,0.2);
+            background: white;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 12px 0;
+            font-size: 1rem;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-weight: 500;
+        }
+
+        .feedback-icon {
+            width: 32px;
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .btn-submit {
+            background: linear-gradient(95deg, #2b5e3b, #1f8a4c);
+            border: none;
+            width: 100%;
+            padding: 14px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: white;
+            border-radius: 50px;
+            margin-top: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 8px 14px rgba(0,0,0,0.1);
+            letter-spacing: 2px;
+        }
+
+        .btn-submit:hover {
+            background: linear-gradient(95deg, #1f723f, #0f683b);
+            transform: scale(0.98);
+        }
+
+        .btn-submit:disabled {
+            background: #9aaebf;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            margin: 20px 28px 28px;
+        }
+
+        .action-btn {
+            flex: 1;
+            background: #e9ecef;
+            border: none;
+            padding: 12px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #2c3e66;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .action-btn:active {
+            transform: scale(0.96);
+        }
+
+        .action-btn.reset-btn {
+            background: #ffedd5;
+            color: #b45309;
+        }
+
+        .action-btn.mistake-btn {
+            background: #ffe4e6;
+            color: #9b2c2c;
+        }
+
+        /* 错题模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.75);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #fffef7;
+            width: 90%;
+            max-width: 800px;
+            max-height: 85vh;
+            border-radius: 48px;
+            padding: 20px 20px 30px;
+            overflow-y: auto;
+            box-shadow: 0 30px 40px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #ffcd94;
+            margin-bottom: 18px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .close-modal {
+            font-size: 2rem;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-weight: bold;
+        }
+
+        .mistake-item {
+            background: #fef2e0;
+            border-radius: 28px;
+            margin-bottom: 20px;
+            padding: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            border-left: 8px solid #e07c3c;
+        }
+
+        .mistake-img {
+            width: 100px;
+            height: auto;
+            border-radius: 16px;
+            background: #ddd;
+            object-fit: cover;
+            border: 1px solid #ccc;
+        }
+
+        .mistake-detail {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+
+        .mistake-detail p {
+            margin: 6px 0;
+        }
+
+        .wrong-highlight {
+            background: #ffccc7;
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 30px;
+            font-weight: bold;
+        }
+
+        .correct-highlight {
+            background: #c8e6df;
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 30px;
+            font-weight: bold;
+        }
+
+        .empty-mistake {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            padding: 12px;
+            color: #6c757d;
+            background: #f1f3f4;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container" id="gameApp">
+    <div class="game-header">
+        <div class="score-box">🏆 得分: <span id="scoreValue">0</span> / <span id="totalScoreSpan">102</span></div>
+        <div class="progress">📌 第 <span id="currentIdx">1</span> / <span id="totalQSpan">34</span> 题</div>
+    </div>
+    <div class="map-area">
+        <img id="outlineImage" class="outline-img" alt="省份轮廓图" src="" onerror="this.src='https://via.placeholder.com/300x200?text=轮廓加载失败'">
+    </div>
+    <div class="input-panel">
+        <div class="input-group">
+            <div class="input-label"><span class="label-badge">全称</span> 省级行政区全称</div>
+            <div class="input-wrapper">
+                <input type="text" id="fullNameInput" class="input-field" placeholder="例: 安徽省" autocomplete="off">
+                <div class="feedback-icon" id="fullFeedback"></div>
+            </div>
+        </div>
+        <div class="input-group">
+            <div class="input-label"><span class="label-badge">简称</span> 简称 (支持多简称)</div>
+            <div class="input-wrapper">
+                <input type="text" id="shortNameInput" class="input-field" placeholder="例: 皖" autocomplete="off">
+                <div class="feedback-icon" id="shortFeedback"></div>
+            </div>
+        </div>
+        <div class="input-group">
+            <div class="input-label"><span class="label-badge">行政中心</span> 省会 / 首府</div>
+            <div class="input-wrapper">
+                <input type="text" id="capitalInput" class="input-field" placeholder="例: 合肥" autocomplete="off">
+                <div class="feedback-icon" id="capitalFeedback"></div>
+            </div>
+        </div>
+        <button id="submitBtn" class="btn-submit">✓ 确定 ✓</button>
+    </div>
+    <div class="action-buttons">
+        <button id="resetGameBtn" class="action-btn reset-btn">🔄 重新开局</button>
+        <button id="viewMistakeBtn" class="action-btn mistake-btn">📋 查看错题</button>
+    </div>
+    <footer>✏️ 每个空答对得1分 · 自动跳转下一省</footer>
+</div>
+
+<!-- 错题模态框 -->
+<div id="mistakeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>📚 错题本 (错误答案对照)</span>
+            <button class="close-modal" id="closeModalBtn">&times;</button>
+        </div>
+        <div id="mistakeListContainer"></div>
+    </div>
+</div>
+
+<script>
+    // --------------------------------------------------------------
+    // 1. 根据Excel内容构建原始数据 (34个省级行政区)
+    // --------------------------------------------------------------
+    const rawData = [
+        { full: "安徽省", shortRaw: "皖", capital: "合肥", img: "https://mmbiz.qpic.cn/mmbiz_jpg/RcaMYia5uzuibvsvsr0zKSGUPSQDCSdSDnZgiayTjtEJBLsTwVhicXtVK5EogIiaibEM4E1LoN0TrnQDicNicRUwpENByg/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=10" },
+        { full: "澳门特别行政区", shortRaw: "澳", capital: "澳门", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsTsOia6HXOIcSFTnbxOdDhAXpz4CFgdCwJ1ia9bcickhKLNia2Ax6KZQfoA/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=32" },
+        { full: "北京市", shortRaw: "京", capital: "北京", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsFpGiaezO9icjibtfHbWTDciasfULiaw1aRK2WeopOBuRng844ibZucXLIOTg/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=0" },
+        { full: "福建省", shortRaw: "闽", capital: "福州", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsaZbicUAL5TM7Ajt22VfsJuWXUb5Sls0TyWGgeg5M9VNbTSdmHn4nz7A/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=12" },
+        { full: "甘肃省", shortRaw: "甘/陇", capital: "兰州", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsUItA99U8LacjH7fZGRBwDoCIFREqCXibclLZ1URpiaBfs1Bff7WHgEDA/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=28" },
+        { full: "广东省", shortRaw: "粤", capital: "广州", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsUia5AaPQKe3cTW4PiaOTSXUHMfKVw5PoRzscE2YW2uD9k4WbdaicpK54g/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=18" },
+        { full: "广西壮族自治区", shortRaw: "桂", capital: "南宁", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsS1QiaFdBtAiaw6L6mtYPFiaQ2Z1esOfwGI3dKItNibUrVw5dYcbctOGhibA/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=19" },
+        { full: "贵州省", shortRaw: "贵/黔", capital: "贵阳", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsibPu6soopxV4pWibJGmswgfUgZhaiaV8kSKpIoXv5dtIlfSpMpqguC1rA/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=23" },
+        { full: "海南省", shortRaw: "琼", capital: "海口", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsYeYhGUQ2uCibbu2iazrnnj46twe8zyYJAV5INicKp0n1GyemrQLDdwhUQ/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=20" },
+        { full: "河北省", shortRaw: "冀", capital: "石家庄", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsg9Bt3SMIYGlial5TuYlzUgE9dDgscCEBt79mxia3mq03udW3B7gQP4kA/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=3" },
+        { full: "河南省", shortRaw: "豫", capital: "郑州", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsVia40g5AkIJML8eC4zRfhOEruibtmOeyD6ODdy5jcjbyUBqDNoib963Pw/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=15" },
+        { full: "黑龙江省", shortRaw: "黑", capital: "哈尔滨", img: "https://mmbiz.qpic.cn/mmbiz_jpg/RcaMYia5uzuibvsvsr0zKSGUPSQDCSdSDnGGsr8yfn68FM6gCFlbnhgb5JgKMZQC5y5315MoIn0G7rRgxGmXWuHA/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=5" },
+        { full: "湖北省", shortRaw: "鄂", capital: "武汉", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFds9B48Chyar0n915M354l0icOic0EFM2PEkAxWIjCGZNfjPggsmcuU64LA/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=16" },
+        { full: "湖南省", shortRaw: "湘", capital: "长沙", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsdqbo0HH2ibEAaUIVl5crNnHGoib4ULHoBpvSNRzMWCyQuhrXP2YXKZDg/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=17" },
+        { full: "吉林省", shortRaw: "吉", capital: "长春", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsM5PLBUsSXWae1vVH2jPnTbcn1y2DI5Q7MOQKm3H0tDta1MHP8cVAeg/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=7" },
+        { full: "江苏省", shortRaw: "苏", capital: "南京", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsuNsq2ibNiaFmRmm9Wo0DibKnFA9YpQaZh3wc5Boc72nlhOExlZQE6xf7w/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=9" },
+        { full: "江西省", shortRaw: "赣", capital: "南昌", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdskR8y662TicRicDcyCialZ97rlmcGgWOia3EP6wNiabibZuQ7iccCoVxqWUoUg/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=13" },
+        { full: "辽宁省", shortRaw: "辽", capital: "沈阳", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsPqdI5hZbuA8Onjtl3LicEJlegc51mOUMib32R1j4s5XxfHv4mFeph5iaw/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=6" },
+        { full: "内蒙古自治区", shortRaw: "内蒙古", capital: "呼和浩特", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsuiaQcOib5fDFVMYIY7B2mVcYJibvFvahsReIOX3wKibzLMn7Df6fwq9v6Q/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=4" },
+        { full: "宁夏回族自治区", shortRaw: "宁", capital: "银川", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsLLiaumTgYM6x8fJ2ibjGs6ic9nTRcjicco7ASziaEvW2vQRqH3w0PI4Rn9g/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=30" },
+        { full: "青海省", shortRaw: "青", capital: "西宁", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsLICmKgnj9HyjPgZ9ru6PN9ZdMqjhKJfVPj9IUfHTU8rhJ3xCJE20Ow/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=29" },
+        { full: "山东省", shortRaw: "鲁", capital: "济南", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdslS5tqicQWFBkeSkaAgiclzjKicyz97MlNvHBjNogkGJSRMD8HERqSI2qQ/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=14" },
+        { full: "山西省", shortRaw: "晋", capital: "太原", img: "https://mmbiz.qpic.cn/mmbiz_jpg/RcaMYia5uzuibvsvsr0zKSGUPSQDCSdSDnibG0IJic9x0oDw8ia0D23AmNngNThxLreuxMAP3VatN9JBErdn99Te0PQ/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=2" },
+        { full: "陕西省", shortRaw: "陕/秦", capital: "西安", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsuwcic79kQ7XLJ31MMKwqFo2rrBqz6eWGFt01dibQkJfs6qNxqsgx95lA/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=27" },
+        { full: "上海市", shortRaw: "沪", capital: "上海", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdskvFLna7LB0EIK6vafnqeLIFXHxbZze5pEdySB5B9TKETjkghy1BK7g/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=8" },
+        { full: "四川省", shortRaw: "川/蜀", capital: "成都", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsBsdca0quZWtdorWkFJOOtcI7mVvvQJFUA12rF7nxSQrM8jUgNgHCUQ/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=21" },
+        { full: "台湾省", shortRaw: "台", capital: "台北", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsKq3dE3keNp8rLzaMCyc3WoeFnGKNmXictDntictEgKPTYzfZ4xF7BvZA/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=33" },
+        { full: "天津市", shortRaw: "津", capital: "天津", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFds1hvRtGoc6umicrRXKKjAc0jy8OtyulDcyuQLOwHYiaSibcV95GiakQvN5A/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=1" },
+        { full: "西藏自治区", shortRaw: "藏", capital: "拉萨", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFds5uibvardVNZ3Ex6ibADSGicrWyOejdZ0jGN3Qd9IwOBcw6L6yBWZlyEkg/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=25" },
+        { full: "香港特别行政区", shortRaw: "港", capital: "香港", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsfBWcJ4Uc0fZft9PTfkl5Y8iaB18hqfmibZZKJfSVxws4HSPlCZhROcMw/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=31" },
+        { full: "新疆维吾尔自治区", shortRaw: "新", capital: "乌鲁木齐", img: "https://mmbiz.qpic.cn/mmbiz_jpg/RcaMYia5uzuibvsvsr0zKSGUPSQDCSdSDnsbUdrsE4W7CJVG5BJHz5aVricC9tSExicRvDfaVtc8TicSnD698aDVk8g/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=26" },
+        { full: "云南省", shortRaw: "云/滇", capital: "昆明", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsom7UBuWxnfmAPibhxKF5c8X7pOgIHAgMdDIIqniaqPzjBpiclK5qvibJjw/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=24" },
+        { full: "浙江省", shortRaw: "浙", capital: "杭州", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsb3tIxEDdeicxU1icHjYvhibhhXYiaZUkCtOYtYib5gYP87OSouPoISC620w/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=11" },
+        { full: "重庆市", shortRaw: "渝", capital: "重庆", img: "https://mmbiz.qpic.cn/mmbiz_jpg/cljFkOpJzGO3ZsWYjtwDGicwJsSDxYFdsoKt3L7BoXQuBHusqW0gbJkib5UpxQeRL0xvzdLNsGECVS7AT9rlSaNg/640?wx_fmt=jpeg&wxfrom=5&wx_lazy=1&tp=webp#imgIndex=22" }
+    ];
+
+    // 预处理简称列表
+    function parseShortList(shortRaw) {
+        if (shortRaw.includes('/')) return shortRaw.split('/').map(s => s.trim());
+        else return [shortRaw.trim()];
+    }
+
+    const masterQuestions = rawData.map(item => ({
+        fullName: item.full,
+        shortList: parseShortList(item.shortRaw),
+        capital: item.capital,
+        imgUrl: item.img
+    }));
+
+    const TOTAL_QS = masterQuestions.length;      // 34
+    const MAX_SCORE = TOTAL_QS * 3;               // 102
+
+    // 全局游戏状态
+    let currentGameQuestions = [];      // 打乱后的题目数组（存对象引用）
+    let currentIndex = 0;
+    let totalScore = 0;
+    let gameFinished = false;
+    let answersRecord = [];              // 每个题目 { userFull, userShort, userCapital, correctFull, correctShort, correctCapital }
+    let answeredFlags = [];              // 每道题是否已作答
+    let autoTimer = null;
+
+    // DOM 元素
+    const scoreSpan = document.getElementById('scoreValue');
+    const totalScoreSpan = document.getElementById('totalScoreSpan');
+    const currentIdxSpan = document.getElementById('currentIdx');
+    const totalQSpan = document.getElementById('totalQSpan');
+    const outlineImg = document.getElementById('outlineImage');
+    const fullInput = document.getElementById('fullNameInput');
+    const shortInput = document.getElementById('shortNameInput');
+    const capitalInput = document.getElementById('capitalInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const resetBtn = document.getElementById('resetGameBtn');
+    const viewMistakeBtn = document.getElementById('viewMistakeBtn');
+    const modal = document.getElementById('mistakeModal');
+    const mistakeContainer = document.getElementById('mistakeListContainer');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
+    totalScoreSpan.innerText = MAX_SCORE;
+    totalQSpan.innerText = TOTAL_QS;
+
+    // 辅助函数: 清空反馈图标
+    function clearFeedbacks() {
+        document.getElementById('fullFeedback').innerHTML = '';
+        document.getElementById('shortFeedback').innerHTML = '';
+        document.getElementById('capitalFeedback').innerHTML = '';
+    }
+
+    // 设置反馈图标
+    function setFeedback(elemId, isCorrect) {
+        const elem = document.getElementById(elemId);
+        if (isCorrect) elem.innerHTML = '✅';
+        else elem.innerHTML = '❌';
+    }
+
+    // 更新分数UI
+    function updateScoreUI() {
+        scoreSpan.innerText = totalScore;
+    }
+
+    // 渲染当前题目 (清空输入, 清空反馈)
+    function renderCurrentQuestion() {
+        if (gameFinished || currentIndex >= TOTAL_QS) return;
+        const q = currentGameQuestions[currentIndex];
+        outlineImg.src = q.imgUrl;
+        fullInput.value = '';
+        shortInput.value = '';
+        capitalInput.value = '';
+        clearFeedbacks();
+        // 更新进度
+        currentIdxSpan.innerText = currentIndex + 1;
+        // 确保提交按钮不禁用
+        submitBtn.disabled = false;
+    }
+
+    // 结束游戏，弹出弹框并禁用提交
+    function finishGameAndShowResult() {
+        if (gameFinished) return;
+        gameFinished = true;
+        submitBtn.disabled = true;
+        let message = '';
+        if (totalScore === MAX_SCORE) message = '👍太棒啦！';
+        else if (totalScore >= 60 && totalScore <= 101) message = '差一点，再接再厉！';
+        else message = '☹️继续努力哦';
+        alert(`🎉 游戏完成！\n最终得分: ${totalScore} / ${MAX_SCORE}\n${message}`);
+    }
+
+    // 自动跳下一题
+    function goToNextQuestion() {
+        if (autoTimer) clearTimeout(autoTimer);
+        autoTimer = setTimeout(() => {
+            if (gameFinished) return;
+            // 判断是否完成所有题目
+            if (currentIndex + 1 >= TOTAL_QS) {
+                // 已是最后一题，完成游戏
+                finishGameAndShowResult();
+                return;
+            }
+            currentIndex++;
+            renderCurrentQuestion();
+            submitBtn.disabled = false;
+            autoTimer = null;
+        }, 700);
+    }
+
+    // 提交当前题目逻辑
+    function onSubmit() {
+        if (gameFinished) {
+            alert("游戏已经结束，请重新开局吧~");
+            return;
+        }
+        if (answeredFlags[currentIndex]) {
+            alert("本题已完成，自动跳转中，请稍后~");
+            return;
+        }
+        const q = currentGameQuestions[currentIndex];
+        const userFull = fullInput.value.trim();
+        const userShort = shortInput.value.trim();
+        const userCapital = capitalInput.value.trim();
+
+        // 正确性判断
+        const isFullCorrect = (userFull === q.fullName);
+        const isShortCorrect = q.shortList.some(s => s === userShort);
+        const isCapitalCorrect = (userCapital === q.capital);
+
+        // 记录答案（用于错题本）
+        answersRecord[currentIndex] = {
+            question: q,
+            userFull, userShort, userCapital,
+            isFullCorrect, isShortCorrect, isCapitalCorrect,
+            correctFull: q.fullName,
+            correctShort: q.shortList.join('/'),
+            correctCapital: q.capital
+        };
+        answeredFlags[currentIndex] = true;
+
+        // 更新分数 & 显示反馈
+        let addedScore = 0;
+        if (isFullCorrect) { addedScore++; setFeedback('fullFeedback', true); }
+        else { setFeedback('fullFeedback', false); }
+        if (isShortCorrect) { addedScore++; setFeedback('shortFeedback', true); }
+        else { setFeedback('shortFeedback', false); }
+        if (isCapitalCorrect) { addedScore++; setFeedback('capitalFeedback', true); }
+        else { setFeedback('capitalFeedback', false); }
+
+        if (addedScore > 0) {
+            totalScore += addedScore;
+            updateScoreUI();
+        }
+
+        // 如果是最后一题，提交后标记完成不再跳转，直接结束
+        if (currentIndex === TOTAL_QS - 1) {
+            // 游戏完成
+            finishGameAndShowResult();
+            return;
+        }
+
+        // 自动跳转下一题
+        submitBtn.disabled = true;   // 防止连续点击
+        goToNextQuestion();
+    }
+
+    // 重置/新游戏 (随机打乱顺序，重置所有状态)
+    function resetAndNewGame() {
+        if (autoTimer) clearTimeout(autoTimer);
+        // 打乱题目顺序 (深拷贝数组打乱)
+        const shuffled = [...masterQuestions];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        currentGameQuestions = shuffled;
+        currentIndex = 0;
+        totalScore = 0;
+        gameFinished = false;
+        answersRecord = new Array(TOTAL_QS).fill(null);
+        answeredFlags = new Array(TOTAL_QS).fill(false);
+        updateScoreUI();
+        renderCurrentQuestion();
+        submitBtn.disabled = false;
+        if (autoTimer) autoTimer = null;
+    }
+
+    // 显示错题本模态框
+    function showMistakeModal() {
+        const answeredItems = answersRecord.filter(rec => rec !== null && (!rec.isFullCorrect || !rec.isShortCorrect || !rec.isCapitalCorrect));
+        if (answeredItems.length === 0) {
+            mistakeContainer.innerHTML = '<div class="empty-mistake">✨ 太厉害了！没有错题，全对！ ✨</div>';
+        } else {
+            let html = '';
+            answeredItems.forEach((rec, idx) => {
+                const q = rec.question;
+                html += `
+                    <div class="mistake-item">
+                        <img class="mistake-img" src="${q.imgUrl}" alt="轮廓图" onerror="this.src='https://via.placeholder.com/80?text=图加载失败'">
+                        <div class="mistake-detail">
+                            <p><strong>🏷️ 省份：</strong> ${q.fullName}</p>
+                            <p>📛 全称: <span class="wrong-highlight">${rec.isFullCorrect ? '✓' : (rec.userFull || '(未填)')}</span> → 正确: <span class="correct-highlight">${rec.correctFull}</span></p>
+                            <p>📌 简称: <span class="wrong-highlight">${rec.isShortCorrect ? '✓' : (rec.userShort || '(未填)')}</span> → 正确: <span class="correct-highlight">${rec.correctShort}</span></p>
+                            <p>🏙️ 行政中心: <span class="wrong-highlight">${rec.isCapitalCorrect ? '✓' : (rec.userCapital || '(未填)')}</span> → 正确: <span class="correct-highlight">${rec.correctCapital}</span></p>
+                        </div>
+                    </div>
+                `;
+            });
+            mistakeContainer.innerHTML = html;
+        }
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+    }
+
+    // 绑定事件
+    submitBtn.addEventListener('click', onSubmit);
+    resetBtn.addEventListener('click', () => { resetAndNewGame(); });
+    viewMistakeBtn.addEventListener('click', showMistakeModal);
+    closeModalBtn.addEventListener('click', closeModal);
+    window.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    // 启动游戏
+    resetAndNewGame();
+</script>
+</body>
+</html>
